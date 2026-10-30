@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#bfe1f3" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%23070b10'/%3E%3Cpath d='M24 6 39 14.7v18.6L24 42 9 33.3V14.7L24 6Z' stroke='%235fd8ff' stroke-width='2' fill='none'/%3E%3Ccircle cx='24' cy='24' r='4' stroke='%235fd8ff' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
+  <title>CHEM·PLANT — 化学方程式 3D 反应工程演示台</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div id="sceneRoot" class="scene-root"></div>
+    <div id="labelLayer" class="label-layer"></div>
+    <div class="screen-vignette"></div>
+    <div class="screen-grain"></div>
+    <div id="hazardVignette" class="hazard-vignette"></div>
+    <div id="whiteFlash" class="white-flash"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="M24 3.5 41.8 13.8v20.4L24 44.5 6.2 34.2V13.8L24 3.5Z" stroke="currentColor" stroke-width="1.4"/>
+            <circle cx="24" cy="24" r="4.4" stroke="currentColor" stroke-width="1.4"/>
+            <circle cx="24" cy="11.6" r="2.2" fill="currentColor"/>
+            <circle cx="34.6" cy="30" r="2.2" fill="currentColor"/>
+            <circle cx="13.4" cy="30" r="2.2" fill="currentColor"/>
+            <path d="M24 15.9v3.7M27.8 26.2l4.5 2.6M20.2 26.2l-4.5 2.6" stroke="currentColor" stroke-width="1.3"/>
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <div class="brand-name">CHEM<span>·</span>PLANT</div>
+          <div class="brand-sub">化学方程式 · 3D 反应工程演示台</div>
+        </div>
+      </div>
+
+      <div class="top-status" id="topStatus">
+        <div class="plant-live"><span class="live-dot" id="plantLiveDot"></span><span id="plantStatusText">装置待机</span></div>
+        <div class="status-divider"></div>
+        <div class="micro-readout"><span>环境温度</span><b id="envTemp">25.0 °C</b></div>
+        <div class="micro-readout"><span>大气压</span><b>101.3 kPa</b></div>
+        <div class="micro-readout hide-sm"><span>通风系统</span><b class="ok" id="ventStatus">运行中</b></div>
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="soundBtn" title="声音" aria-label="声音开关">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 10v4h3l4 3V7L7 10H4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M15 9.2a4 4 0 0 1 0 5.6M17.7 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="sound-wave"/></svg>
+          <span class="btn-led"></span>
+        </button>
+        <button class="icon-btn" id="rotateBtn" title="自动环绕" aria-label="自动环绕">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.4-5.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M20 4v5h-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="icon-btn" id="resetViewBtn" title="重置视角" aria-label="重置视角">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 9V4h5M20 15v5h-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 8.4A8 8 0 0 1 19 7M19.2 15.6A8 8 0 0 1 5 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" id="fullscreenBtn" title="全屏" aria-label="全屏">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="icon-btn lib-btn" id="libraryBtn" title="方程式库 (L)" aria-label="打开方程式库" aria-haspopup="dialog" aria-controls="eqLibrary">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5v-13Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H19M8 7h7M8 10.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="lib-btn-label">方程式库</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="reaction-rail glass-panel">
+      <div class="rail-head">
+        <div>
+          <span class="eyebrow">REACTION LIBRARY</span>
+          <h2>反应库</h2>
+          <span class="rail-sub">按重点程度排序</span>
+        </div>
+        <span class="rail-count" id="railCount">250</span>
+      </div>
+      <div class="reaction-list" id="reactionList"></div>
+      <button class="rail-more" id="railMore" type="button" aria-expanded="false" aria-controls="reactionList">
+        <span id="railMoreLabel">展开更多 · 还有 240 条</span>
+        <svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="rail-foot">
+        <div class="interlock">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4.5 6.8v5.4c0 4.5 3.2 7.7 7.5 8.8 4.3-1.1 7.5-4.3 7.5-8.8V6.8L12 3Z" stroke="currentColor" stroke-width="1.4"/><path d="m8.8 12 2.1 2.1 4.4-4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>安全联锁已接入</b><span>DCS · 泄压 · 尾气吸收</span></div>
+        </div>
+        <p class="rail-note">高中化学 · 必修 / 选择性必修<br><i></i>数据为教学演示，非真实工况</p>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="camera-rail" id="cameraRail">
+        <button class="camera-btn is-active" data-view="overview"><svg viewBox="0 0 24 24" fill="none"><path d="M3 8.5 12 4l9 4.5-9 4.5-9-4.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m3 12 9 4.5 9-4.5M3 15.5 12 20l9-4.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span>全景</span></button>
+        <button class="camera-btn" data-view="reactor"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="3" width="10" height="16" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M9 19v2M15 19v2M9.5 8h5M9.5 11h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>反应釜</span></button>
+        <button class="camera-btn" data-view="tanks"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="6" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><rect x="14" y="4" width="6" height="15" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M7 7V5h8v2" stroke="currentColor" stroke-width="1.4"/></svg><span>罐区</span></button>
+        <button class="camera-btn" data-view="console"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M8 20h8M12 16v4M7 8h6M7 11h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>控制台</span></button>
+        <button class="camera-btn is-hidden" id="benchViewBtn" data-view="bench"><svg viewBox="0 0 24 24" fill="none"><path d="M5 8h6l-2 9H7L5 8Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M13 5h6l-2 10h-2l-2-10ZM5.5 20h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>对比台</span></button>
+      </div>
+
+      <div class="event-feed" id="eventFeed" aria-live="polite"></div>
+
+      <div class="scene-hint" id="sceneHint">
+        <span class="mouse-orbit"></span>
+        <span>拖动旋转 · 滚轮缩放 · 点击设备查看信息</span>
+      </div>
+
+      <div class="hazard-banner" id="hazardBanner">
+        <div class="hazard-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 22 20.5H2L12 3.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 9v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.05" fill="currentColor"/></svg>
+        </div>
+        <div class="hazard-copy"><span id="hazardKicker">PROCESS ALARM</span><b id="hazardTitle">反应失控</b><p id="hazardDesc"></p></div>
+        <div class="hazard-actions"><button id="hazardAction">紧急处置</button></div>
+      </div>
+    </main>
+
+    <aside class="info-panel glass-panel">
+      <div class="info-scroll" id="infoScroll">
+        <div class="experiment-head">
+          <div class="exp-tagline"><span class="exp-tag" id="expTag">沉淀反应</span><span class="exp-no" id="expNo">EXP 01</span></div>
+          <h1 id="expTitle">碳酸氢钠与石灰水</h1>
+          <div class="exp-formula" id="expFormula">NaHCO₃ + Ca(OH)₂</div>
+        </div>
+
+        <div class="run-strip">
+          <div class="run-state" id="runState"><i></i><span id="runStateText">待机</span></div>
+          <div class="run-phase" id="runPhase">准备投料</div>
+          <div class="run-time" id="runTime">00:00</div>
+        </div>
+
+        <section class="info-block observation-block">
+          <div class="block-head">
+            <div class="block-title"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.4"/></svg><h3>实验现象</h3></div>
+            <span class="live-tag"><i></i>实时</span>
+          </div>
+          <p class="observation-lead" id="observationLead">调节左侧参数，观察反应釜内的变化。</p>
+          <ul class="observation-list" id="observationList"></ul>
+        </section>
+
+        <section class="info-block equation-block">
+          <div class="block-head">
+            <div class="block-title"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 17h16M8 3v18M16 3v18" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><h3>化学方程式</h3></div>
+            <span class="mini-tag accent" id="equationMode">石灰水少量</span>
+          </div>
+          <div class="equation-card" id="equationCard"></div>
+          <div class="ionic-equation" id="ionicEquation"></div>
+        </section>
+
+        <section class="info-block">
+          <div class="block-head">
+            <div class="block-title"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><h3>实时读数</h3></div>
+            <span class="mini-tag">LIVE</span>
+          </div>
+          <div class="metrics-grid" id="metricsGrid"></div>
+          <div class="mini-chart" id="miniChartWrap">
+            <canvas id="precipChart" width="640" height="250"></canvas>
+            <div class="chart-legend"><span><i class="legend-dot"></i>CaCO₃ 沉淀量</span><span class="chart-note">n(Ca(OH)₂)/n(NaHCO₃)</span></div>
+          </div>
+          <div class="products" id="productsWrap"></div>
+        </section>
+
+        <section class="info-block hazard-note" id="hazardNoteBlock">
+          <div class="block-head">
+            <div class="block-title"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 22 20.5H2L12 3.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 9v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1" fill="currentColor"/></svg><h3>风险与处置</h3></div>
+            <span class="risk-level low" id="riskLevel">低风险</span>
+          </div>
+          <ul class="risk-list" id="riskList"></ul>
+        </section>
+
+        <section class="compare-section" id="compareSection">
+          <div class="block-head">
+            <div class="block-title"><svg viewBox="0 0 24 24" fill="none"><path d="M8 4v7l-4 7a2 2 0 0 0 1.8 3h12.4a2 2 0 0 0 1.8-3l-4-7V4M6 4h12M6.5 14h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>少量 / 过量 对比</h3></div>
+            <span class="mini-tag">核心考点</span>
+          </div>
+          <div class="compare-grid">
+            <button class="compare-card" data-ratio="0.35">
+              <span class="compare-label">少量石灰水</span>
+              <span class="compare-eq">2NaHCO₃ + Ca(OH)₂</span>
+              <span class="compare-arrow">→ CaCO₃↓ + Na₂CO₃ + 2H₂O</span>
+              <span class="compare-desc">石灰水不足，HCO₃⁻ 过量；清液含 Na₂CO₃。</span>
+            </button>
+            <button class="compare-card" data-ratio="1.25">
+              <span class="compare-label">过量石灰水</span>
+              <span class="compare-eq">NaHCO₃ + Ca(OH)₂</span>
+              <span class="compare-arrow">→ CaCO₃↓ + NaOH + H₂O</span>
+              <span class="compare-desc">石灰水足量，HCO₃⁻ 完全反应；清液含 NaOH。</span>
+            </button>
+          </div>
+          <p class="compare-tip" id="compareTip">两者均产生白色沉淀、均无气泡；沉淀量随石灰水增加而增多，至 1:1 后不再增加。</p>
+        </section>
+      </div>
+    </aside>
+
+    <div class="control-dock glass-panel" id="controlDock">
+      <div class="dock-head">
+        <div class="dock-title">
+          <span class="dock-kicker">PROCESS CONTROL</span>
+          <div><b>实验参数</b><span id="dockSub">实时调节 · 即时反馈</span></div>
+        </div>
+        <div class="preset-row" id="presetRow"></div>
+        <div class="dock-actions">
+          <button class="btn danger emergency-btn" id="emergencyBtn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 22 20.5H2L12 3.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 9v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1" fill="currentColor"/></svg>
+            <span>紧急泄压</span>
+          </button>
+          <button class="btn ghost" id="resetBtn" title="重置实验">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 9V4h5M20 15v5h-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 8.4A8 8 0 0 1 19 7M19.2 15.6A8 8 0 0 1 5 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>重置</span>
+          </button>
+          <button class="btn primary" id="startBtn">
+            <svg viewBox="0 0 24 24" fill="none" class="play-icon"><path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor"/></svg>
+            <span id="startBtnText">开始投料</span>
+          </button>
+        </div>
+      </div>
+      <div class="slider-row" id="sliderRow"></div>
+      <div class="dock-foot">
+        <div class="process-steps" id="processSteps">
+          <span class="step is-active">01 配液</span><i></i><span class="step">02 进料</span><i></i><span class="step">03 反应</span><i></i><span class="step">04 分析</span>
+        </div>
+        <div class="dock-status"><span class="dock-dot"></span><span id="dockStatusText">系统就绪 · 等待指令</span></div>
+      </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+    <div class="toast-stack" id="toastStack"></div>
+
+    <section class="eq-lib" id="eqLibrary" aria-hidden="true">
+      <div class="eq-lib-scrim" data-eq-close></div>
+      <div class="eq-lib-shell" role="dialog" aria-modal="true" aria-labelledby="eqLibTitle">
+        <header class="eq-lib-head">
+          <div class="eq-lib-title">
+            <span class="eyebrow">EQUATION INDEX · 2026 新人教版</span>
+            <h2 id="eqLibTitle">高中化学方程式库</h2>
+            <p id="eqLibMeta">正在装订方程式…</p>
+          </div>
+          <div class="eq-lib-tools">
+            <label class="eq-search">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.4" stroke="currentColor" stroke-width="1.5"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input id="eqSearch" type="search" placeholder="搜索物质、方程式或现象，如 Na₂O₂ / 铝热 / 双水解" autocomplete="off" spellcheck="false" aria-label="搜索方程式" />
+              <kbd>ESC</kbd>
+            </label>
+            <button class="eq-lib-close" id="eqLibClose" type="button" aria-label="关闭方程式库">
+              <svg viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <nav class="eq-lib-filters" aria-label="方程式分类与标签">
+          <div class="eq-cats" id="eqCategories"></div>
+          <div class="eq-tag-row">
+            <span class="eq-tag-label">筛选</span>
+            <div class="eq-tags" id="eqTags">
+              <button class="eq-tag-chip" type="button" data-tag="重点">重点</button>
+              <button class="eq-tag-chip" type="button" data-tag="易错">易错</button>
+              <button class="eq-tag-chip" type="button" data-tag="工业">工业</button>
+              <button class="eq-tag-chip" type="button" data-tag="安全">安全</button>
+              <button class="eq-tag-chip" type="button" data-tag="3D">全流程装置</button>
+            </div>
+          </div>
+        </nav>
+
+        <div class="eq-lib-body">
+          <section class="eq-list-panel">
+            <div class="eq-list-head">
+              <span id="eqResultCount">共 0 条</span>
+              <span>点击条目查看离子方程式与易错点</span>
+            </div>
+            <div class="eq-list" id="eqList" role="listbox" aria-label="方程式列表"></div>
+            <div class="eq-empty" id="eqEmpty" hidden>
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.4" stroke="currentColor" stroke-width="1.4"/><path d="m16 16 4 4M8.4 11h5.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              <b>没有找到匹配的方程式</b>
+              <p>试试物质式、反应名称或“双水解”“少量”“工业”等关键词。</p>
+              <button type="button" id="eqClearFilter">清除筛选</button>
+            </div>
+          </section>
+
+          <aside class="eq-detail" id="eqDetail" aria-live="polite">
+            <button class="eq-detail-back" id="eqDetailBack" type="button">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              返回列表
+            </button>
+            <div class="eq-detail-scroll" id="eqDetailBody"></div>
+          </aside>
+        </div>
+
+        <footer class="eq-lib-foot">
+          <span><kbd>L</kbd> 打开 / 关闭</span>
+          <span><kbd>↑</kbd><kbd>↓</kbd> 切换条目</span>
+          <span class="eq-foot-note"><i></i> 仅收录配平且结论明确的反应 · 已校正 3 处讲义笔误</span>
+        </footer>
+      </div>
+    </section>
+
+    <section class="eq-lab" id="eqLab" aria-hidden="true">
+      <div class="eq-lab-telemetry" aria-hidden="true">
+        <span><i></i>EQUATION 3D LAB</span>
+        <span id="eqLabTelemetry">待机 · 装置已校准</span>
+      </div>
+      <div class="eq-lab-view" id="eqLabView">
+        <div class="eq-lab-scene" id="eqLabScene"></div>
+        <div class="eq-lab-labels" id="eqLabLabels"></div>
+      </div>
+
+      <header class="eq-lab-top">
+        <button class="eq-lab-back" id="eqLabBack" type="button">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>返回方程式库</span>
+        </button>
+        <div class="eq-lab-heading">
+          <span class="eyebrow">PARAMETRIC 3D EXPERIMENT</span>
+          <h2 id="eqLabTitle">3D 实验台</h2>
+        </div>
+        <div class="eq-lab-actions">
+          <div class="lab-mode-switch" role="group" aria-label="场景形态">
+            <button class="lab-mode-btn is-active" id="eqLabModeLab" type="button" aria-pressed="true" title="实验室形态">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M9.5 3h5M10.5 3v5.2L5.4 17a2.4 2.4 0 0 0 2.1 3.5h9a2.4 2.4 0 0 0 2.1-3.5l-5.1-8.8V3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.4 14.6h9.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span>实验室</span>
+            </button>
+            <button class="lab-mode-btn" id="eqLabModePlant" type="button" aria-pressed="false" title="化工厂形态">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M3 20h18M6 20V9l5 3V9l5 3V6l4 2v12" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              <span>化工厂</span>
+            </button>
+          </div>
+          <button class="eq-lab-plant" id="eqLabPlant" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 20h18M6 20V9l5 3V9l5 3V6l4 2v12" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            全厂流程
+          </button>
+          <button class="eq-lab-exit" id="eqLabExit" type="button" aria-label="关闭 3D 实验台">
+            <svg viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <aside class="eq-lab-panel" id="eqLabPanel">
+        <div class="lab-panel-head">
+          <div>
+            <span class="eyebrow">REACTION DOSSIER</span>
+            <div class="lab-archetype" id="eqLabArchetype">烧杯 · 溶液反应</div>
+          </div>
+          <span class="lab-live"><i></i>LIVE 3D</span>
+        </div>
+        <div class="lab-panel-scroll">
+          <div class="lab-eq" id="eqLabEquation"></div>
+          <div class="lab-tags" id="eqLabTags"></div>
+          <div class="lab-states" id="eqLabStates"></div>
+          <div class="lab-type" id="eqLabType" hidden></div>
+          <div class="lab-plant-note" id="eqLabPlantNote" hidden></div>
+          <p class="lab-phen" id="eqLabPhen"></p>
+          <div class="lab-ion" id="eqLabIon" hidden></div>
+          <div class="lab-note" id="eqLabNote" hidden></div>
+          <div class="lab-hazard" id="eqLabHazard" hidden>
+            <b>安全提示</b>
+            <span id="eqLabHazardText"></span>
+          </div>
+          <section class="lab-section">
+            <div class="lab-section-head"><span>演示进程</span><b id="eqLabPhaseLabel">待投料</b></div>
+            <ol class="lab-steps" id="eqLabSteps"></ol>
+          </section>
+          <section class="lab-section" id="eqLabObsSection">
+            <div class="lab-section-head"><span>实验现象</span><small>课本 · 逐条对照</small></div>
+            <ul class="lab-obs" id="eqLabObs"></ul>
+          </section>
+          <section class="lab-section">
+            <div class="lab-section-head"><span>物料色标</span><small>实测现象配色</small></div>
+            <div class="lab-swatches" id="eqLabSwatches"></div>
+          </section>
+          <section class="lab-section">
+            <div class="lab-section-head"><span>试剂浓度</span><b id="eqLabIntensityVal">1.0×</b></div>
+            <input class="lab-range" id="eqLabIntensity" type="range" min="0.3" max="2" step="0.1" value="1" aria-label="试剂浓度" />
+            <p class="lab-range-hint">调节浓度，气泡密度、沉淀速度与显色强度实时变化。</p>
+          </section>
+        </div>
+      </aside>
+
+      <footer class="eq-lab-dock">
+        <div class="lab-dock-left">
+          <button class="lab-play" id="eqLabPlay" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><path class="icon-play" d="M8 5.5v13l10-6.5-10-6.5Z" fill="currentColor"/><path class="icon-pause" d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor"/></svg>
+            <span>播放</span>
+          </button>
+          <button class="lab-restart" id="eqLabRestart" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 9V4h5M20 15v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.7 8.4A8 8 0 0 1 19 7M19.3 15.6A8 8 0 0 1 5 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            重播
+          </button>
+        </div>
+        <div class="lab-track" id="eqLabTrack">
+          <i class="lab-track-fill" id="eqLabTrackFill"></i>
+        </div>
+        <div class="lab-dock-right">
+          <span class="lab-timer" id="eqLabTimer">00.0s</span>
+          <span class="lab-hint">拖拽旋转 · 滚轮缩放</span>
+          <button class="lab-info-btn" id="eqLabInfoToggle" type="button">详情</button>
+        </div>
+      </footer>
+      <div class="lab-flash" id="eqLabFlash"></div>
+    </section>
+
+    <div class="boot-screen" id="bootScreen">
+      <div class="boot-inner">
+        <div class="boot-logo">
+          <svg viewBox="0 0 48 48" fill="none"><path d="M24 3.5 41.8 13.8v20.4L24 44.5 6.2 34.2V13.8L24 3.5Z" stroke="currentColor" stroke-width="1.2"/><circle cx="24" cy="24" r="4.4" stroke="currentColor" stroke-width="1.2"/><circle cx="24" cy="11.6" r="2" fill="currentColor"/><circle cx="34.6" cy="30" r="2" fill="currentColor"/><circle cx="13.4" cy="30" r="2" fill="currentColor"/></svg>
+        </div>
+        <div class="boot-title">CHEM·PLANT</div>
+        <div class="boot-sub">REACTION ENGINEERING SIMULATOR</div>
+        <div class="boot-bar"><i id="bootBar"></i></div>
+        <div class="boot-status" id="bootStatus">正在初始化三维装置…</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
