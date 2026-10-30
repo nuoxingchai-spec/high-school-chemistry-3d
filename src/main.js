@@ -1213,6 +1213,7 @@ function openEquationLab(eq, source = 'library') {
   if (backLabel) backLabel.textContent = source === 'rail' ? '返回化工厂' : '返回方程式库';
   const lab = ensureEquationLab();
   hideTooltip();
+  lab.setMode('plant');
   lab.open(deriveDemo(eq));
   sound.ensure();
   sound.click();

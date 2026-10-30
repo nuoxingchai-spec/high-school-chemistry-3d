@@ -2173,8 +2173,8 @@ export class EquationLab {
       back: root.querySelector('#eqLabBack'),
       exit: root.querySelector('#eqLabExit'),
       plant: root.querySelector('#eqLabPlant'),
-      modeLab: root.querySelector('#eqLabModeLab'),
-      modePlant: root.querySelector('#eqLabModePlant'),
+      modeToggle: root.querySelector('#eqLabModeToggle'),
+      modeToggleLabel: root.querySelector('#eqLabModeToggleLabel'),
       plantNote: root.querySelector('#eqLabPlantNote'),
       archetype: root.querySelector('#eqLabArchetype'),
       equation: root.querySelector('#eqLabEquation'),
@@ -2210,7 +2210,7 @@ export class EquationLab {
     this.done = false;
     this.t = 0;
     this.intensity = 1;
-    this.mode = 'lab';
+    this.mode = 'plant';
     this._uiAcc = 0;
     this._bubbleAcc = 0;
     this._pptAcc = 0;
@@ -2345,7 +2345,7 @@ export class EquationLab {
     this.scene.add(this.dust);
 
     this._initLabels();
-    this._applyModeLook('lab');
+    this._applyModeLook(this.mode);
     this._resizeObserver = new ResizeObserver(() => this.resize());
     this._resizeObserver.observe(this.viewEl);
     this.resize();
@@ -2550,11 +2550,14 @@ export class EquationLab {
       this.dust.material.size = 0.02;
     }
 
-    if (this.el.modeLab && this.el.modePlant) {
-      this.el.modeLab.classList.toggle('is-active', !plant);
-      this.el.modePlant.classList.toggle('is-active', plant);
-      this.el.modeLab.setAttribute('aria-pressed', String(!plant));
-      this.el.modePlant.setAttribute('aria-pressed', String(plant));
+    if (this.el.modeToggle) {
+      this.el.modeToggle.setAttribute('aria-pressed', String(plant));
+      const action = plant ? '切换到实验室形态' : '切换到化工厂形态';
+      this.el.modeToggle.title = action;
+      this.el.modeToggle.setAttribute('aria-label', action);
+    }
+    if (this.el.modeToggleLabel) {
+      this.el.modeToggleLabel.textContent = plant ? '切换实验室' : '切换化工厂';
     }
   }
 
@@ -2563,8 +2566,9 @@ export class EquationLab {
   _bindUI() {
     this.el.back.addEventListener('click', () => this.close('back'));
     this.el.exit.addEventListener('click', () => this.callbacks.onExit?.());
-    this.el.modeLab?.addEventListener('click', () => this.setMode('lab'));
-    this.el.modePlant?.addEventListener('click', () => this.setMode('plant'));
+    this.el.modeToggle?.addEventListener('click', () => {
+      this.setMode(this.mode === 'plant' ? 'lab' : 'plant');
+    });
     this.el.plant.addEventListener('click', () => {
       if (this.demo?.eq) this.callbacks.onOpenPlant?.(this.demo.eq);
     });
