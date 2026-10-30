@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EQUATION_CATEGORIES } from './equations.js';
+import { buildMoleculeShow, moleculeInfo } from './molecular.js';
 
 const TAU = Math.PI * 2;
 const WHITE = new THREE.Color(0xffffff);
@@ -2170,11 +2171,20 @@ export class EquationLab {
     this.callbacks = { onBack, onExit, onOpenPlant };
     this.el = {
       title: root.querySelector('#eqLabTitle'),
+      eyebrow: root.querySelector('#eqLabEyebrow'),
       back: root.querySelector('#eqLabBack'),
       exit: root.querySelector('#eqLabExit'),
       plant: root.querySelector('#eqLabPlant'),
       modeToggle: root.querySelector('#eqLabModeToggle'),
       modeToggleLabel: root.querySelector('#eqLabModeToggleLabel'),
+      molecule: root.querySelector('#eqLabMolecule'),
+      moleculeLabel: root.querySelector('#eqLabMoleculeLabel'),
+      molPanel: root.querySelector('#eqLabMolPanel'),
+      molSource: root.querySelector('#eqLabMolSource'),
+      molCounts: root.querySelector('#eqLabMolCounts'),
+      molEquation: root.querySelector('#eqLabMolEquation'),
+      molNote: root.querySelector('#eqLabMolNote'),
+      molLegend: root.querySelector('#eqLabMolLegend'),
       plantNote: root.querySelector('#eqLabPlantNote'),
       archetype: root.querySelector('#eqLabArchetype'),
       equation: root.querySelector('#eqLabEquation'),
@@ -2205,6 +2215,9 @@ export class EquationLab {
 
     this.demo = null;
     this.rig = null;
+    this.molecule = null;
+    this.moleculeInfo = null;
+    this._macroMode = 'plant';
     this.isOpen = false;
     this.playing = false;
     this.done = false;
@@ -2272,6 +2285,8 @@ export class EquationLab {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.07;
     this.controls.enablePan = false;
+    this._molAutoPan = true;
+    this.controls.addEventListener('start', () => { this._molAutoPan = false; });
     this.controls.minDistance = 2.4;
     this.controls.maxDistance = 9.5;
     this.controls.minPolarAngle = 0.22;
@@ -2509,16 +2524,36 @@ export class EquationLab {
   }
 
   _applyModeLook(mode) {
+    const molecule = mode === 'molecule';
     const plant = mode === 'plant';
+    const lab = mode === 'lab';
     this.mode = mode;
     this.root.classList.toggle('is-plant-mode', plant);
-    this.stageLab.visible = !plant;
+    this.root.classList.toggle('is-molecule-mode', molecule);
+    this.stageLab.visible = lab;
     this.stagePlant.visible = plant;
-    this.renderer.toneMappingExposure = plant ? 1.02 : 0.94;
+    this.renderer.toneMappingExposure = molecule ? 0.98 : plant ? 1.02 : 0.94;
     this.scene.fog = plant ? new THREE.Fog(0x0a1a22, 10, 26) : null;
-    if ('environmentIntensity' in this.scene) this.scene.environmentIntensity = plant ? 0.16 : 0.26;
+    if ('environmentIntensity' in this.scene) this.scene.environmentIntensity = plant ? 0.16 : molecule ? 0.2 : 0.26;
+    this.controls.maxDistance = molecule ? 36 : 9.5;
+    this.controls.minDistance = molecule ? 3.2 : 2.4;
 
-    if (plant) {
+    if (molecule) {
+      this.hemiLight.color.setHex(0xcfeaff);
+      this.hemiLight.groundColor.setHex(0x0c1c26);
+      this.hemiLight.intensity = 0.52;
+      this.keyLight.color.setHex(0xe9f8ff);
+      this.keyLight.intensity = 1.7;
+      this.fillLight.color.setHex(0x8fd2ff);
+      this.fillLight.intensity = 0.78;
+      this.rimLight.color.setHex(0xaef0ff);
+      this.rimLight.intensity = 14;
+      this.plantWarm.intensity = 0;
+      this.plantCool.intensity = 2;
+      this.dust.material.color.setHex(0x9fe8ff);
+      this.dust.material.opacity = 0.22;
+      this.dust.material.size = 0.016;
+    } else if (plant) {
       this.hemiLight.color.setHex(0x8fb6cc);
       this.hemiLight.groundColor.setHex(0x22303a);
       this.hemiLight.intensity = 0.44;
@@ -2559,6 +2594,24 @@ export class EquationLab {
     if (this.el.modeToggleLabel) {
       this.el.modeToggleLabel.textContent = plant ? '切换实验室' : '切换化工厂';
     }
+    if (this.el.molecule) {
+      this.el.molecule.setAttribute('aria-pressed', String(molecule));
+      const action = molecule ? '返回实验形态' : '切换到分子演示';
+      this.el.molecule.title = action;
+      this.el.molecule.setAttribute('aria-label', action);
+    }
+    if (this.el.moleculeLabel) {
+      this.el.moleculeLabel.textContent = molecule ? '返回实验' : '分子演示';
+    }
+    if (this.el.eyebrow) {
+      this.el.eyebrow.textContent = molecule
+        ? 'MOLECULAR REACTION 3D'
+        : plant ? 'PARAMETRIC PLANT SIMULATION' : 'PARAMETRIC 3D EXPERIMENT';
+    }
+    if (this.el.molPanel) this.el.molPanel.hidden = !molecule;
+    if (this.labels) {
+      Object.values(this.labels).forEach((label) => { label.object.visible = !molecule; });
+    }
   }
 
   /* ---------------- UI ---------------- */
@@ -2568,6 +2621,10 @@ export class EquationLab {
     this.el.exit.addEventListener('click', () => this.callbacks.onExit?.());
     this.el.modeToggle?.addEventListener('click', () => {
       this.setMode(this.mode === 'plant' ? 'lab' : 'plant');
+    });
+    this.el.molecule?.addEventListener('click', () => {
+      if (this.mode === 'molecule') this.setMode(this._macroMode || 'plant');
+      else this.setMode('molecule');
     });
     this.el.plant.addEventListener('click', () => {
       if (this.demo?.eq) this.callbacks.onOpenPlant?.(this.demo.eq);
@@ -2643,8 +2700,10 @@ export class EquationLab {
 
     this._renderInfo(demo);
     this._buildRig(demo);
-    this._createLabelsContent(demo);
-    this._refreshLabels();
+    if (this.mode !== 'molecule') {
+      this._createLabelsContent(demo);
+      this._refreshLabels();
+    }
     this._updateUI();
 
     this.resize();
@@ -2666,14 +2725,21 @@ export class EquationLab {
   }
 
   setMode(mode) {
-    if (mode !== 'lab' && mode !== 'plant') return;
+    if (mode !== 'lab' && mode !== 'plant' && mode !== 'molecule') return;
     if (mode === this.mode) return;
+    if (mode === 'molecule') {
+      if (this.mode !== 'molecule') this._macroMode = this.mode;
+    } else {
+      this._macroMode = mode;
+    }
     this._applyModeLook(mode);
     if (!this.isOpen || !this.demo) return;
     this._buildRig(this.demo);
     this._renderInfo(this.demo);
-    this._createLabelsContent(this.demo);
-    this._refreshLabels();
+    if (this.mode !== 'molecule') {
+      this._createLabelsContent(this.demo);
+      this._refreshLabels();
+    }
     this.t = 0;
     this.done = false;
     this.playing = true;
@@ -2692,11 +2758,11 @@ export class EquationLab {
     return 3;
   }
 
-  _applyFraming(pos, target) {
+  _applyFraming(pos, target, maxFit = 1.55) {
     const t = new THREE.Vector3(...target);
     const p = new THREE.Vector3(...pos);
     const aspect = (this.viewEl.clientWidth || 1) / Math.max(1, this.viewEl.clientHeight);
-    const fit = aspect < 0.95 ? Math.min(1.55, Math.pow(0.95 / aspect, 0.7)) : 1;
+    const fit = aspect < 0.95 ? Math.min(maxFit, Math.pow(0.95 / aspect, 0.7)) : 1;
     p.sub(t).multiplyScalar(fit).add(t);
     this.camera.position.copy(p);
     this.controls.target.copy(t);
@@ -2704,6 +2770,18 @@ export class EquationLab {
   }
 
   _setCameraFor(arch, demo, mode = 'lab') {
+    if (mode === 'molecule') {
+      const framed = this._moleculeFramingFor(0);
+      if (framed) {
+        this.camera.position.copy(framed.pos);
+        this.controls.target.copy(framed.target);
+        this.controls.update();
+        return;
+      }
+      const framing = this.molecule?.framing || { pos: [0, 3.7, 8.6], target: [0, 1.55, 0] };
+      this._applyFraming(framing.pos, framing.target);
+      return;
+    }
     const heatBeaker = arch === 'beaker' && !!(demo?.flags.heat || demo?.flags.flame);
     if (mode === 'plant') {
       const plantFraming = {
@@ -2728,6 +2806,28 @@ export class EquationLab {
     this._applyFraming(...framing);
   }
 
+  _moleculeFramingFor(phase = 0) {
+    const framing = this.molecule?.framing;
+    if (!framing || !framing.phase) return null;
+    const aspect = (this.viewEl.clientWidth || 1) / Math.max(1, this.viewEl.clientHeight);
+    if (aspect >= 0.95) return null;
+    const b = framing.phase[phase] || framing.phase[0];
+    const vHalf = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const distance = clamp(Math.max(b.halfH / vHalf, b.halfW / (vHalf * aspect)) + 2.0, 8, 36);
+    const target = new THREE.Vector3(b.cx, b.cy, 0);
+    const dir = new THREE.Vector3(0, 0.18, 1).normalize();
+    return { target, pos: target.clone().addScaledVector(dir, distance) };
+  }
+
+  _updateMoleculeCamera(phase, dt) {
+    if (!this._molAutoPan) return;
+    const framed = this._moleculeFramingFor(phase);
+    if (!framed) return;
+    const k = 1 - Math.exp(-dt * 2.4);
+    this.camera.position.lerp(framed.pos, k);
+    this.controls.target.lerp(framed.target, k);
+  }
+
   resize() {
     const w = this.viewEl.clientWidth;
     const h = this.viewEl.clientHeight;
@@ -2743,15 +2843,22 @@ export class EquationLab {
   _renderInfo(demo) {
     const { eq } = demo;
     const cat = EQUATION_CATEGORIES.find((item) => item.id === eq.c);
+    const molecule = this.mode === 'molecule';
     const plant = this.mode === 'plant';
     const plantInfo = PLANT_INFO[demo.archetype];
+    const molInfo = molecule ? moleculeInfo(demo) : null;
+    this.moleculeInfo = molInfo;
     this.el.title.textContent = eq.t;
-    this.el.archetype.textContent = plant && plantInfo
-      ? `${plantInfo.code} · ${plantInfo.name}`
-      : demo.apparatus.label;
-    this.el.telemetry.textContent = plant && plantInfo
-      ? `${plantInfo.name} · ${demo.condLabel}`
-      : `${demo.apparatus.name} · ${demo.condLabel}`;
+    this.el.archetype.textContent = molecule
+      ? '分子视角 · 球棍模型'
+      : plant && plantInfo
+        ? `${plantInfo.code} · ${plantInfo.name}`
+        : demo.apparatus.label;
+    this.el.telemetry.textContent = molecule && molInfo
+      ? `原子重组 · ${molInfo.sourceLabel}`
+      : plant && plantInfo
+        ? `${plantInfo.name} · ${demo.condLabel}`
+        : `${demo.apparatus.name} · ${demo.condLabel}`;
 
     if (this.el.plantNote) {
       this.el.plantNote.hidden = !(plant && plantInfo);
@@ -2791,7 +2898,8 @@ export class EquationLab {
     if (demo.indicator) chips.push(demo.indicator.label);
     if (demo.mist) chips.push('白雾');
     (eq.tags || []).forEach((tag) => chips.push(tag));
-    chips.push(plant ? '化工厂形态' : '实验室形态');
+    if (molecule && molInfo?.analysis.electron.active) chips.push('电子转移');
+    chips.push(molecule ? '分子视角' : plant ? '化工厂形态' : '实验室形态');
     this.el.tags.replaceChildren(...chips.map((text, index) => {
       const chip = document.createElement('span');
       chip.className = `lab-chip${index === chips.length - 1 ? ' is-accent' : ''}`;
@@ -2861,10 +2969,36 @@ export class EquationLab {
     this.el.hazard.classList.toggle('is-danger', hazard.explosive);
     this.el.hazardText.textContent = hazard.text;
 
-    this.el.plant.hidden = !demo.isLinked;
+    this.el.plant.hidden = !demo.isLinked || molecule;
     if (demo.isLinked) this.el.plant.dataset.eq = eq.id;
 
-    this._stepItems = demo.steps.map((step, index) => {
+    if (this.el.molPanel) {
+      this.el.molPanel.hidden = !molecule;
+      if (molecule && molInfo) {
+        const a = molInfo.analysis;
+        const charged = a.source === 'ionic' || a.charges.some((c) => c !== 0);
+        this.el.molSource.textContent = molInfo.sourceLabel;
+        this.el.molCounts.textContent = `反应物 ${a.atomCountLeft} 原子 · 生成物 ${a.atomCountRight} 原子${charged ? ' · 电荷守恒' : ''}`;
+        this.el.molEquation.textContent = molInfo.particleEquation;
+        this.el.molNote.textContent = `${molInfo.note}。同种元素的原子逐一配对，全部系数已展开为实际粒子数。`;
+        const items = molInfo.elements.map((item) => {
+          const chip = document.createElement('span');
+          chip.className = 'lab-mol-el';
+          const dot = document.createElement('i');
+          dot.style.background = item.color;
+          const sym = document.createElement('b');
+          sym.textContent = item.el;
+          const label = document.createElement('em');
+          label.textContent = `${item.name} ×${item.count}`;
+          chip.append(dot, sym, label);
+          return chip;
+        });
+        this.el.molLegend.replaceChildren(...items);
+      }
+    }
+
+    const stepSource = molecule && molInfo ? molInfo.steps : demo.steps;
+    this._stepItems = stepSource.map((step, index) => {
       const li = document.createElement('li');
       const idx = document.createElement('i');
       idx.textContent = `0${index + 1}`;
@@ -2999,6 +3133,20 @@ export class EquationLab {
       this._disposeObject(this.rig.group);
       this.rig = null;
     }
+    if (this.molecule) {
+      this.molecule.dispose();
+      this.molecule = null;
+    }
+    if (this.mode === 'molecule') {
+      const show = buildMoleculeShow(demo);
+      this.molecule = show;
+      this.moleculeInfo = show.info;
+      this._molAutoPan = true;
+      this.scene.add(show.group);
+      this._setCameraFor(demo.archetype, demo, 'molecule');
+      this._resetEffects();
+      return;
+    }
     const rig = {
       group: new THREE.Group(),
       flames: [],
@@ -3088,6 +3236,7 @@ export class EquationLab {
 
   _resetEffects() {
     Object.values(this.pools).forEach((pool) => pool.clear());
+    if (this.molecule) this.molecule.reset();
     for (const wave of this._waves) {
       this.scene.remove(wave.mesh);
       wave.mesh.geometry.dispose();
@@ -3201,9 +3350,13 @@ export class EquationLab {
 
     const plantInfo = PLANT_INFO[this.demo.archetype];
     if (this.done) {
-      this.el.telemetry.textContent = this.mode === 'plant' && plantInfo
-        ? `${plantInfo.code} · 产物已采出 · 演示完成`
-        : '产物已收集 · 演示完成';
+      this.el.telemetry.textContent = this.mode === 'molecule'
+        ? '原子重组完成 · 演示结束'
+        : this.mode === 'plant' && plantInfo
+          ? `${plantInfo.code} · 产物已采出 · 演示完成`
+          : '产物已收集 · 演示完成';
+    } else if (this.mode === 'molecule') {
+      this.el.telemetry.textContent = `分子视角 · ${PHASE_NAMES[phase]} · ${this.demo.condLabel}`;
     } else {
       this.el.telemetry.textContent = `${this.mode === 'plant' && plantInfo ? `${plantInfo.code} · ` : ''}${PHASE_NAMES[phase]} · ${this.demo.condLabel}`;
     }
@@ -3268,19 +3421,27 @@ export class EquationLab {
 
   _updateScene(dt) {
     const demo = this.demo;
-    const rig = this.rig;
-    if (!demo || !rig) return;
+    if (!demo) return;
 
     const t = this.t;
     const phase = this._phaseIndex;
+
+    if (phase !== this._lastPhase) {
+      if (this.mode !== 'molecule') this._onPhase(phase);
+      this._lastPhase = phase;
+    }
+
+    if (this.mode === 'molecule') {
+      this.molecule?.update(t, this.intensity, dt);
+      this._updateMoleculeCamera(phase, dt);
+      return;
+    }
+
+    const rig = this.rig;
+    if (!rig) return;
     const cond = t >= PHASE_STARTS[1];
     const reacting = t >= PHASE_STARTS[2] && t < PHASE_STARTS[3];
     const product = t >= PHASE_STARTS[3];
-
-    if (phase !== this._lastPhase) {
-      this._onPhase(phase);
-      this._lastPhase = phase;
-    }
 
     if (rig.liquidMat) {
       const k = smooth((t - PHASE_STARTS[2]) / 2.6);

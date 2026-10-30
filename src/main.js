@@ -1084,6 +1084,10 @@ function renderEqDetail(eq) {
         <svg viewBox="0 0 24 24" fill="none"><path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor"/></svg>
         <span>3D 实验演示</span>
       </button>
+      <button class="eq-action molecule" type="button" data-molecule="${eq.id}">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.1" stroke="currentColor" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="8.4" ry="3.5" transform="rotate(32 12 12)" stroke="currentColor" stroke-width="1.3"/><ellipse cx="12" cy="12" rx="8.4" ry="3.5" transform="rotate(-32 12 12)" stroke="currentColor" stroke-width="1.3"/></svg>
+        <span>分子演示</span>
+      </button>
       ${eq.link ? `<button class="eq-action" type="button" data-link="${eq.link}">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 20h18M6 20V9l5 3V9l5 3V6l4 2v12" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         <span>化工厂全流程</span>
@@ -1207,13 +1211,13 @@ function ensureEquationLab() {
   return eqLab;
 }
 
-function openEquationLab(eq, source = 'library') {
+function openEquationLab(eq, source = 'library', options = {}) {
   if (!eq) return;
   const backLabel = document.querySelector('#eqLabBack span');
   if (backLabel) backLabel.textContent = source === 'rail' ? '返回化工厂' : '返回方程式库';
   const lab = ensureEquationLab();
   hideTooltip();
-  lab.setMode('plant');
+  lab.setMode(options.mode === 'molecule' ? 'molecule' : 'plant');
   lab.open(deriveDemo(eq));
   sound.ensure();
   sound.click();
@@ -1266,6 +1270,11 @@ function bindEqLibraryUI() {
     const demoBtn = event.target.closest('[data-demo]');
     if (demoBtn) {
       openEquationLab(libState.selected);
+      return;
+    }
+    const molBtn = event.target.closest('[data-molecule]');
+    if (molBtn) {
+      openEquationLab(libState.selected, 'library', { mode: 'molecule' });
       return;
     }
     const linkBtn = event.target.closest('[data-link]');

@@ -4284,6 +4284,277 @@ input[type="range"]::-moz-range-thumb {
   color: var(--accent);
 }
 
+/* ---- molecular mode ---- */
+
+.eq-lab.is-molecule-mode {
+  background:
+    radial-gradient(ellipse at 52% 16%, rgba(84, 196, 240, 0.2), transparent 54%),
+    radial-gradient(ellipse at 18% 88%, rgba(92, 118, 226, 0.18), transparent 62%),
+    linear-gradient(180deg, #030a12 0%, #061525 52%, #0a2233 100%);
+}
+
+.eq-lab.is-molecule-mode::before {
+  background-image:
+    linear-gradient(rgba(120, 214, 240, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 214, 240, 0.04) 1px, transparent 1px);
+}
+
+.eq-lab.is-molecule-mode .eq-lab-view::before {
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(110, 214, 255, 0.1), transparent 60%),
+    radial-gradient(ellipse at 16% 84%, rgba(100, 130, 240, 0.08), transparent 54%);
+}
+
+.eq-lab.is-molecule-mode .eq-lab-telemetry > span:first-child {
+  color: rgba(146, 216, 238, 0.7);
+}
+
+.eq-lab.is-molecule-mode #eqLabTelemetry {
+  color: rgba(198, 236, 248, 0.9);
+}
+
+.eq-lab.is-molecule-mode #eqLabModeToggle,
+.eq-lab.is-molecule-mode #eqLabPlant {
+  display: none;
+}
+
+.eq-lab.is-molecule-mode #eqLabStates,
+.eq-lab.is-molecule-mode #eqLabPhen,
+.eq-lab.is-molecule-mode #eqLabIon,
+.eq-lab.is-molecule-mode #eqLabObsSection,
+.eq-lab.is-molecule-mode #eqLabSwatchSection {
+  display: none;
+}
+
+.lab-molecule-toggle[aria-pressed="true"] {
+  border-color: rgba(128, 226, 255, 0.5);
+  background: rgba(22, 70, 90, 0.6);
+  color: #ccf5ff;
+}
+
+.lab-mol-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid rgba(120, 220, 255, 0.2);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(100, 220, 255, 0.1), transparent 56%),
+    linear-gradient(160deg, rgba(18, 44, 60, 0.72), rgba(7, 17, 26, 0.7));
+}
+
+.lab-mol-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lab-mol-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(120, 220, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(80, 200, 255, 0.08);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #a9ecff;
+}
+
+.lab-mol-source::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #67d6ff;
+  box-shadow: 0 0 8px rgba(100, 220, 255, 0.8);
+}
+
+.lab-mol-head b {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #8fb2c0;
+}
+
+.lab-mol-eq {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.85;
+  color: #e6faff;
+  word-break: break-word;
+}
+
+.lab-mol-note {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.65;
+  color: #9fbfcc;
+}
+
+.lab-mol-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.lab-mol-el {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid rgba(170, 210, 224, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: #cfe6ee;
+}
+
+.lab-mol-el i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.35);
+}
+
+.lab-mol-el b {
+  font-weight: 600;
+  color: #f0fbff;
+}
+
+.lab-mol-el em {
+  font-style: normal;
+  color: #8fb2c0;
+}
+
+.eq-action.molecule {
+  border-color: rgba(120, 225, 255, 0.32);
+  background: rgba(90, 200, 255, 0.06);
+  color: #bdefff;
+}
+
+.eq-action.molecule:hover {
+  border-color: rgba(120, 225, 255, 0.55);
+  background: rgba(90, 200, 255, 0.12);
+}
+
+/* ---- molecular labels ---- */
+
+.mol-label {
+  pointer-events: none;
+  user-select: none;
+}
+
+.mol-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 8px;
+  border: 1px solid rgba(120, 215, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(5, 14, 22, 0.82);
+  backdrop-filter: blur(5px);
+  box-shadow: 0 10px 22px -14px rgba(2, 10, 16, 0.9);
+  white-space: nowrap;
+  transition: opacity 0.3s ease, border-color 0.3s ease;
+}
+
+.mol-tag b {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: #dff8ff;
+}
+
+.mol-tag span {
+  font-size: 8px;
+  color: #8fb2c0;
+}
+
+.mol-tag.is-reactant { border-color: rgba(110, 210, 255, 0.32); }
+
+.mol-tag.is-product {
+  border-color: rgba(110, 235, 190, 0.4);
+}
+
+.mol-tag.is-product b { color: #d9ffef; }
+
+.mol-tag.is-hidden { visibility: hidden; }
+
+.mol-caption {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid rgba(120, 210, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(6, 16, 24, 0.58);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: #8fb8c8;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+
+.mol-caption i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #67d6ff;
+  box-shadow: 0 0 7px rgba(100, 220, 255, 0.7);
+}
+
+.mol-caption.is-right i {
+  background: #7fe8b6;
+  box-shadow: 0 0 7px rgba(120, 235, 180, 0.7);
+}
+
+.mol-caption.is-hidden { visibility: hidden; }
+
+.mol-cond {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 118px;
+  padding: 7px 13px;
+  border: 1px solid rgba(120, 225, 255, 0.34);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(8, 22, 32, 0.88), rgba(5, 13, 20, 0.86));
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 30px -18px rgba(0, 8, 14, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.mol-cond b {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #dff9ff;
+}
+
+.mol-cond span {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  color: #8fb8c8;
+}
+
+.mol-cond.is-pop { animation: molCondPop 0.5s ease; }
+
+@keyframes molCondPop {
+  0% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
 /* ---- responsive ---- */
 
 @media (max-width: 1280px) {
